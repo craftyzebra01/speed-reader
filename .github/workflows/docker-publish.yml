@@ -13,7 +13,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     env:
-      IMAGE_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY || format('{0}/rsvp-speed-reader', secrets.DOCKERHUB_USERNAME) }}
+      IMAGE_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY || format('{0}/speed-reader', secrets.DOCKERHUB_USERNAME) }}
 
     steps:
       - name: Checkout
