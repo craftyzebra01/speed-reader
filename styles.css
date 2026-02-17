@@ -1,0 +1,100 @@
+:root {
+  color-scheme: light dark;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #121212;
+  color: #f2f2f2;
+}
+
+.app {
+  width: min(920px, 95vw);
+  background: #1d1d1d;
+  border: 1px solid #2d2d2d;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+h1 {
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  margin-top: 0;
+  color: #a9a9a9;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+}
+
+input,
+button {
+  font: inherit;
+}
+
+input[type='number'],
+input[type='file'] {
+  background: #111;
+  color: #f2f2f2;
+  border: 1px solid #3f3f3f;
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  background: #4856ff;
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.reader {
+  border: 1px solid #333;
+  border-radius: 10px;
+  min-height: 260px;
+  padding: 1rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.word-display {
+  font-size: clamp(2rem, 7vw, 5rem);
+  font-weight: 700;
+  min-height: 1.2em;
+}
+
+.progress {
+  color: #a0a0a0;
+  margin-bottom: 0;
+}
