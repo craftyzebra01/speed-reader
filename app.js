@@ -109,7 +109,7 @@ async function getOpfPath(zip) {
 }
 
 function getChapterTitle(doc, chapterNumber) {
-  const heading = doc.querySelector('h1, h2, h3, title');
+  const heading = doc.querySelector('h1, h2, h3');
   const headingText = heading ? normalizeText(heading.textContent || '') : '';
   return headingText || `Chapter ${chapterNumber}`;
 }
@@ -184,7 +184,27 @@ async function extractWords(epubFile) {
     });
   }
 
-  return { words, chapters };
+  return { words, chapters: normalizeChapterTitles(chapters) };
+}
+
+
+function normalizeChapterTitles(chapters) {
+  const counts = new Map();
+  for (const chapter of chapters) {
+    const title = chapter.title || '';
+    counts.set(title, (counts.get(title) || 0) + 1);
+  }
+
+  return chapters.map((chapter, index) => {
+    const title = chapter.title || '';
+    if (!title || counts.get(title) > 1) {
+      return {
+        ...chapter,
+        title: `Chapter ${index + 1}`,
+      };
+    }
+    return chapter;
+  });
 }
 
 function findChapterIndexByWordIndex(wordIndex) {
