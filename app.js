@@ -52,6 +52,12 @@ function normalizeText(rawText) {
     .trim();
 }
 
+function normalizeReferencePath(path) {
+  return (path || '')
+    .split('#')[0]
+    .replace(/^\.\//, '');
+}
+
 function tokenize(text) {
   const cleaned = normalizeText(text);
   if (!cleaned) {
@@ -111,7 +117,76 @@ async function getOpfPath(zip) {
 function getChapterTitle(doc, chapterNumber) {
   const heading = doc.querySelector('h1, h2, h3');
   const headingText = heading ? normalizeText(heading.textContent || '') : '';
-  return headingText || `Chapter ${chapterNumber}`;
+
+  if (headingText && !/^[\divxlcdm\s.\-_:]+$/i.test(headingText)) {
+    return headingText;
+  }
+
+  return `Chapter ${chapterNumber}`;
+}
+
+async function getTocTitleMap(zip, opfPath, opfDoc, manifestItems) {
+  const tocMap = new Map();
+
+  const addTitle = (href, title) => {
+    const cleanTitle = normalizeText(title || '');
+    if (!href || !cleanTitle) {
+      return;
+    }
+
+    const resolvedHref = normalizeReferencePath(resolvePath(opfPath, href));
+    if (!tocMap.has(resolvedHref)) {
+      tocMap.set(resolvedHref, cleanTitle);
+    }
+  };
+
+  const navItem = [...opfDoc.querySelectorAll('manifest > item')].find((item) =>
+    (item.getAttribute('properties') || '').split(/\s+/).includes('nav'),
+  );
+
+  if (navItem) {
+    const navPath = resolvePath(opfPath, navItem.getAttribute('href'));
+    const navFile = zip.file(navPath);
+    if (navFile) {
+      const navHtml = await navFile.async('string');
+      const navDoc = new DOMParser().parseFromString(navHtml, 'text/html');
+      for (const anchor of navDoc.querySelectorAll('nav a[href]')) {
+        addTitle(anchor.getAttribute('href'), anchor.textContent || '');
+      }
+    }
+  }
+
+  const spine = opfDoc.querySelector('spine');
+  const ncxId = spine ? spine.getAttribute('toc') : '';
+  let ncxPath = '';
+
+  if (ncxId && manifestItems.has(ncxId)) {
+    ncxPath = manifestItems.get(ncxId);
+  }
+
+  if (!ncxPath) {
+    const ncxItem = [...opfDoc.querySelectorAll('manifest > item')].find(
+      (item) => item.getAttribute('media-type') === 'application/x-dtbncx+xml',
+    );
+    if (ncxItem) {
+      ncxPath = resolvePath(opfPath, ncxItem.getAttribute('href'));
+    }
+  }
+
+  if (ncxPath) {
+    const ncxFile = zip.file(ncxPath);
+    if (ncxFile) {
+      const ncxXml = await ncxFile.async('string');
+      const ncxDoc = parseXml(ncxXml);
+      for (const navPoint of ncxDoc.querySelectorAll('navPoint')) {
+        const src = navPoint.querySelector('content')?.getAttribute('src') || '';
+        const label = navPoint.querySelector('navLabel > text')?.textContent || '';
+        addTitle(src, label);
+      }
+    }
+  }
+
+  return tocMap;
 }
 
 async function getSpineDocuments(zip, opfPath) {
@@ -131,6 +206,8 @@ async function getSpineDocuments(zip, opfPath) {
       manifestItems.set(id, resolvePath(opfPath, href));
     }
   }
+
+  const tocTitleMap = await getTocTitleMap(zip, opfPath, opfDoc, manifestItems);
 
   const docs = [];
   let chapterNumber = 1;
@@ -157,7 +234,7 @@ async function getSpineDocuments(zip, opfPath) {
     }
 
     docs.push({
-      title: getChapterTitle(doc, chapterNumber),
+      title: tocTitleMap.get(normalizeReferencePath(path)) || getChapterTitle(doc, chapterNumber),
       words,
     });
     chapterNumber += 1;
@@ -278,13 +355,35 @@ function stopTimer() {
   }
 }
 
+function getWordDelay(baseInterval, word) {
+  if (!word) {
+    return baseInterval;
+  }
+
+  if (/[.!?]["')\]]*$/.test(word)) {
+    return Math.round(baseInterval * 1.6);
+  }
+
+  if (/[,;:]["')\]]*$/.test(word)) {
+    return Math.round(baseInterval * 1.35);
+  }
+
+  return baseInterval;
+}
+
+function updateReadingModeUI() {
+  chapterText.hidden = state.running;
+}
+
 function scheduleNextWord() {
   if (!state.running) {
     return;
   }
 
   const wpm = Number(wpmInput.value);
-  const intervalMs = Math.max(40, Math.round(60_000 / Math.max(50, wpm)));
+  const baseIntervalMs = Math.max(40, Math.round(60_000 / Math.max(50, wpm)));
+  const currentWord = state.words[state.currentIndex];
+  const intervalMs = getWordDelay(baseIntervalMs, currentWord);
 
   state.timerId = setTimeout(() => {
     state.currentIndex += 1;
@@ -295,6 +394,7 @@ function scheduleNextWord() {
       pauseBtn.disabled = true;
       startBtn.disabled = false;
       wordDisplay.textContent = 'Done';
+      updateReadingModeUI();
       updateProgress();
       return;
     }
@@ -310,6 +410,7 @@ function startReading() {
   }
 
   state.running = true;
+  updateReadingModeUI();
   startBtn.disabled = true;
   pauseBtn.disabled = false;
   showCurrentWord();
@@ -319,6 +420,7 @@ function startReading() {
 function pauseReading() {
   state.running = false;
   stopTimer();
+  updateReadingModeUI();
   startBtn.disabled = false;
   pauseBtn.disabled = true;
 }
@@ -372,6 +474,7 @@ loadBtn.addEventListener('click', async () => {
     chapterSelect.innerHTML = '<option value="">Load a book first</option>';
     chapterSelect.disabled = true;
     chapterText.textContent = 'Load an EPUB to preview chapter text.';
+    chapterText.hidden = false;
     startBtn.disabled = true;
     pauseBtn.disabled = true;
     resetBtn.disabled = true;
