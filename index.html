@@ -23,6 +23,13 @@
         </label>
 
         <label>
+          Chapter
+          <select id="chapterSelect" disabled>
+            <option value="">Load a book first</option>
+          </select>
+        </label>
+
+        <label>
           Words per minute
           <input id="wpm" type="number" min="50" max="1500" value="300" />
         </label>
@@ -38,6 +45,12 @@
       <section class="reader">
         <div id="wordDisplay" class="word-display">Upload an EPUB to begin</div>
         <p id="progress" class="progress">No book loaded</p>
+      </section>
+
+      <section class="chapter-panel">
+        <h2>Chapter text</h2>
+        <p class="chapter-hint">Click any word below to jump your start point instantly.</p>
+        <div id="chapterText" class="chapter-text">Load an EPUB to preview chapter text.</div>
       </section>
     </main>
 

@@ -1,5 +1,6 @@
 const fileInput = document.getElementById('epubFile');
 const startWordInput = document.getElementById('startWord');
+const chapterSelect = document.getElementById('chapterSelect');
 const wpmInput = document.getElementById('wpm');
 const loadBtn = document.getElementById('loadBtn');
 const startBtn = document.getElementById('startBtn');
@@ -7,9 +8,12 @@ const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
 const wordDisplay = document.getElementById('wordDisplay');
 const progress = document.getElementById('progress');
+const chapterText = document.getElementById('chapterText');
 
 const state = {
   words: [],
+  chapters: [],
+  currentChapterIndex: 0,
   currentIndex: 0,
   timerId: null,
   running: false,
@@ -56,6 +60,32 @@ function tokenize(text) {
   return cleaned.split(' ');
 }
 
+function getAnchorIndex(wordLength) {
+  if (wordLength <= 1) return 0;
+  if (wordLength <= 5) return 1;
+  if (wordLength <= 9) return 2;
+  if (wordLength <= 13) return 3;
+  return 4;
+}
+
+function renderWordWithAnchor(rawWord) {
+  if (!rawWord) {
+    wordDisplay.textContent = 'Done';
+    return;
+  }
+
+  const anchorIndex = Math.min(getAnchorIndex(rawWord.length), rawWord.length - 1);
+  const before = rawWord.slice(0, anchorIndex);
+  const anchor = rawWord.charAt(anchorIndex);
+  const after = rawWord.slice(anchorIndex + 1);
+
+  wordDisplay.innerHTML = `
+    <span class="rsvp-line rsvp-line-top" aria-hidden="true"></span>
+    <span class="rsvp-word">${before}<span class="anchor-letter">${anchor}</span>${after}</span>
+    <span class="rsvp-line rsvp-line-bottom" aria-hidden="true"></span>
+  `;
+}
+
 async function getOpfPath(zip) {
   const containerFile = zip.file('META-INF/container.xml');
   if (!containerFile) {
@@ -78,6 +108,12 @@ async function getOpfPath(zip) {
   return opfPath;
 }
 
+function getChapterTitle(doc, chapterNumber) {
+  const heading = doc.querySelector('h1, h2, h3, title');
+  const headingText = heading ? normalizeText(heading.textContent || '') : '';
+  return headingText || `Chapter ${chapterNumber}`;
+}
+
 async function getSpineDocuments(zip, opfPath) {
   const opfFile = zip.file(opfPath);
   if (!opfFile) {
@@ -97,6 +133,8 @@ async function getSpineDocuments(zip, opfPath) {
   }
 
   const docs = [];
+  let chapterNumber = 1;
+
   for (const itemref of opfDoc.querySelectorAll('spine > itemref')) {
     const idref = itemref.getAttribute('idref');
     if (!idref || !manifestItems.has(idref)) {
@@ -112,7 +150,17 @@ async function getSpineDocuments(zip, opfPath) {
     const html = await contentFile.async('string');
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const bodyText = doc.body ? doc.body.textContent || '' : '';
-    docs.push(bodyText);
+    const words = tokenize(bodyText);
+
+    if (!words.length) {
+      continue;
+    }
+
+    docs.push({
+      title: getChapterTitle(doc, chapterNumber),
+      words,
+    });
+    chapterNumber += 1;
   }
 
   return docs;
@@ -122,8 +170,56 @@ async function extractWords(epubFile) {
   const zip = await JSZip.loadAsync(epubFile);
   const opfPath = await getOpfPath(zip);
   const docs = await getSpineDocuments(zip, opfPath);
-  const mergedText = docs.join(' ');
-  return tokenize(mergedText);
+
+  const words = [];
+  const chapters = [];
+
+  for (const doc of docs) {
+    const startIndex = words.length;
+    words.push(...doc.words);
+    chapters.push({
+      title: doc.title,
+      startIndex,
+      endIndex: words.length - 1,
+    });
+  }
+
+  return { words, chapters };
+}
+
+function findChapterIndexByWordIndex(wordIndex) {
+  const index = state.chapters.findIndex(
+    (chapter) => wordIndex >= chapter.startIndex && wordIndex <= chapter.endIndex,
+  );
+  return index >= 0 ? index : 0;
+}
+
+function renderChapterOptions() {
+  chapterSelect.innerHTML = '';
+  state.chapters.forEach((chapter, index) => {
+    const option = document.createElement('option');
+    option.value = String(index);
+    option.textContent = chapter.title;
+    chapterSelect.append(option);
+  });
+  chapterSelect.disabled = !state.chapters.length;
+}
+
+function renderChapterPreview(chapterIndex) {
+  const chapter = state.chapters[chapterIndex];
+  if (!chapter) {
+    chapterText.textContent = 'Load an EPUB to preview chapter text.';
+    return;
+  }
+
+  const chapterWords = state.words.slice(chapter.startIndex, chapter.endIndex + 1);
+  chapterText.innerHTML = chapterWords
+    .map((word, offset) => {
+      const globalIndex = chapter.startIndex + offset;
+      const selectedClass = globalIndex === state.currentIndex ? ' selected-word' : '';
+      return `<button type="button" class="preview-word${selectedClass}" data-word-index="${globalIndex}">${word}</button>`;
+    })
+    .join(' ');
 }
 
 function updateProgress() {
@@ -136,6 +232,13 @@ function updateProgress() {
   progress.textContent = `Word ${clampedIndex} of ${state.words.length}`;
 }
 
+function syncChapterSelection() {
+  const chapterIndex = findChapterIndexByWordIndex(state.currentIndex);
+  state.currentChapterIndex = chapterIndex;
+  chapterSelect.value = String(chapterIndex);
+  renderChapterPreview(chapterIndex);
+}
+
 function showCurrentWord() {
   if (!state.words.length) {
     wordDisplay.textContent = 'Upload an EPUB to begin';
@@ -143,8 +246,9 @@ function showCurrentWord() {
   }
 
   const currentWord = state.words[state.currentIndex] || 'Done';
-  wordDisplay.textContent = currentWord;
+  renderWordWithAnchor(currentWord);
   updateProgress();
+  syncChapterSelection();
 }
 
 function stopTimer() {
@@ -160,7 +264,7 @@ function scheduleNextWord() {
   }
 
   const wpm = Number(wpmInput.value);
-  const intervalMs = Math.max(40, Math.round((60_000 / Math.max(50, wpm))));
+  const intervalMs = Math.max(40, Math.round(60_000 / Math.max(50, wpm)));
 
   state.timerId = setTimeout(() => {
     state.currentIndex += 1;
@@ -199,10 +303,16 @@ function pauseReading() {
   pauseBtn.disabled = true;
 }
 
+function setCurrentWord(newIndex) {
+  const clamped = Math.min(Math.max(0, newIndex), state.words.length - 1);
+  state.currentIndex = clamped;
+  startWordInput.value = String(clamped + 1);
+  showCurrentWord();
+}
+
 function resetReading() {
   pauseReading();
-  state.currentIndex = Math.max(0, Number(startWordInput.value) - 1);
-  showCurrentWord();
+  setCurrentWord(Math.max(0, Number(startWordInput.value) - 1));
 }
 
 loadBtn.addEventListener('click', async () => {
@@ -216,15 +326,18 @@ loadBtn.addEventListener('click', async () => {
   loadBtn.textContent = 'Loading...';
 
   try {
-    state.words = await extractWords(epubFile);
+    const { words, chapters } = await extractWords(epubFile);
+    state.words = words;
+    state.chapters = chapters;
+
     if (!state.words.length) {
       throw new Error('No readable words were found in this EPUB.');
     }
 
     const startIndex = Math.max(1, Number(startWordInput.value)) - 1;
-    state.currentIndex = Math.min(startIndex, state.words.length - 1);
+    setCurrentWord(Math.min(startIndex, state.words.length - 1));
 
-    showCurrentWord();
+    renderChapterOptions();
     startBtn.disabled = false;
     resetBtn.disabled = false;
     pauseBtn.disabled = true;
@@ -232,9 +345,13 @@ loadBtn.addEventListener('click', async () => {
     console.error(error);
     alert(error.message || 'Could not parse this EPUB file.');
     state.words = [];
+    state.chapters = [];
     state.currentIndex = 0;
     wordDisplay.textContent = 'Upload an EPUB to begin';
     progress.textContent = 'No book loaded';
+    chapterSelect.innerHTML = '<option value="">Load a book first</option>';
+    chapterSelect.disabled = true;
+    chapterText.textContent = 'Load an EPUB to preview chapter text.';
     startBtn.disabled = true;
     pauseBtn.disabled = true;
     resetBtn.disabled = true;
@@ -247,3 +364,37 @@ loadBtn.addEventListener('click', async () => {
 startBtn.addEventListener('click', startReading);
 pauseBtn.addEventListener('click', pauseReading);
 resetBtn.addEventListener('click', resetReading);
+
+chapterSelect.addEventListener('change', () => {
+  if (!state.words.length) {
+    return;
+  }
+  const chapterIndex = Number(chapterSelect.value);
+  const chapter = state.chapters[chapterIndex];
+  if (!chapter) {
+    return;
+  }
+  pauseReading();
+  state.currentChapterIndex = chapterIndex;
+  setCurrentWord(chapter.startIndex);
+});
+
+chapterText.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const button = target.closest('.preview-word');
+  if (!button) {
+    return;
+  }
+
+  const index = Number(button.getAttribute('data-word-index'));
+  if (!Number.isFinite(index)) {
+    return;
+  }
+
+  pauseReading();
+  setCurrentWord(index);
+});
