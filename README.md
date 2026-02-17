@@ -58,9 +58,12 @@ In Docker Hub:
 In GitHub:
 
 - Go to **Settings** → **Secrets and variables** → **Actions**
-- Add:
+- Add secrets:
   - `DOCKERHUB_USERNAME` = your Docker Hub username
   - `DOCKERHUB_TOKEN` = your Docker Hub access token
+- (Optional) Add repository variable:
+  - `DOCKERHUB_REPOSITORY` = full Docker Hub repo path, e.g. `your-org/your-repo`
+  - If omitted, workflow defaults to `${DOCKERHUB_USERNAME}/rsvp-speed-reader`
 
 ### 4) Push to `main`
 
@@ -73,3 +76,15 @@ When a commit lands on `main`, GitHub Actions will:
   - commit SHA tag (for immutable deploys)
 
 You can also trigger the workflow manually from the **Actions** tab via `workflow_dispatch`.
+
+
+### Troubleshooting: workflow is green but image is missing
+
+If the action completes successfully but you cannot find your image:
+
+- Check the **Build and publish Docker image** run summary. It now lists the exact tags pushed.
+- Verify the repository path used by the workflow:
+  - default: `${DOCKERHUB_USERNAME}/rsvp-speed-reader`
+  - override with `DOCKERHUB_REPOSITORY` if your Docker Hub repo has a different name/org
+- Ensure you are checking the same Docker Hub account/org as `DOCKERHUB_USERNAME` (or `DOCKERHUB_REPOSITORY`).
+- Confirm the workflow ran from `main` (or manual dispatch) in the repository where secrets are configured.

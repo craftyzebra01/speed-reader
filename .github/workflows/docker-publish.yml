@@ -12,6 +12,8 @@ permissions:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    env:
+      IMAGE_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY || format('{0}/rsvp-speed-reader', secrets.DOCKERHUB_USERNAME) }}
 
     steps:
       - name: Checkout
@@ -30,7 +32,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/rsvp-speed-reader
+          images: ${{ env.IMAGE_REPOSITORY }}
           tags: |
             type=raw,value=latest
             type=sha
@@ -42,3 +44,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Publish image summary
+        run: |
+          echo "Published image tags:" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' >> "$GITHUB_STEP_SUMMARY"
