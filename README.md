@@ -10,6 +10,12 @@ A lightweight web app that lets you upload an EPUB and read using a Rapid Serial
 - Choose your reading speed (WPM).
 - Start, pause, and reset playback.
 
+## EPUB parsing notes
+
+- Chapter content is extracted from each spine document's rendered body text.
+- The parser reads `document.body.innerText` (falling back to `textContent`) so block-level boundaries are preserved.
+- This avoids merged boundaries such as a heading and first paragraph being joined into one token (for example `Chapter1FirstWord`).
+
 ## Run locally (no Docker)
 
 No build step is required.

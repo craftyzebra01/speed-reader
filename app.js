@@ -66,6 +66,17 @@ function tokenize(text) {
   return cleaned.split(' ');
 }
 
+function getBodyTextWithSpacing(doc) {
+  const body = doc?.body;
+  if (!body) {
+    return '';
+  }
+
+  // `innerText` preserves visible separation between block elements, while
+  // `textContent` can concatenate nodes like `<h1>Chapter 1</h1><p>First`.
+  return body.innerText || body.textContent || '';
+}
+
 function getAnchorIndex(wordLength) {
   if (wordLength <= 1) return 0;
   if (wordLength <= 5) return 1;
@@ -226,7 +237,7 @@ async function getSpineDocuments(zip, opfPath) {
 
     const html = await contentFile.async('string');
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const bodyText = doc.body ? doc.body.textContent || '' : '';
+    const bodyText = getBodyTextWithSpacing(doc);
     const words = tokenize(bodyText);
 
     if (!words.length) {
