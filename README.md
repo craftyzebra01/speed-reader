@@ -35,3 +35,41 @@ docker run --rm -p 8080:8080 rsvp-speed-reader
 ```
 
 Open `http://localhost:8080` in your browser.
+
+## Auto-publish to Docker Hub on push to `main`
+
+A GitHub Actions workflow is included at `.github/workflows/docker-publish.yml`. It builds and pushes your image when code is pushed to `main`.
+
+### 1) Create a Docker Hub repository
+
+Create a repo in Docker Hub, for example:
+
+- `DOCKERHUB_USERNAME/rsvp-speed-reader`
+
+### 2) Create a Docker Hub access token
+
+In Docker Hub:
+
+- Go to **Account Settings** → **Personal access tokens**
+- Create a token with write permissions
+
+### 3) Add GitHub repository secrets
+
+In GitHub:
+
+- Go to **Settings** → **Secrets and variables** → **Actions**
+- Add:
+  - `DOCKERHUB_USERNAME` = your Docker Hub username
+  - `DOCKERHUB_TOKEN` = your Docker Hub access token
+
+### 4) Push to `main`
+
+When a commit lands on `main`, GitHub Actions will:
+
+- log in to Docker Hub
+- build the image from your `Dockerfile`
+- push tags:
+  - `latest`
+  - commit SHA tag (for immutable deploys)
+
+You can also trigger the workflow manually from the **Actions** tab via `workflow_dispatch`.
