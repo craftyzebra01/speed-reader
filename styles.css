@@ -13,7 +13,7 @@ body {
 }
 
 .app {
-  width: min(920px, 95vw);
+  width: min(960px, 95vw);
   background: #1d1d1d;
   border: 1px solid #2d2d2d;
   border-radius: 12px;
@@ -45,12 +45,14 @@ label {
 }
 
 input,
-button {
+button,
+select {
   font: inherit;
 }
 
 input[type='number'],
-input[type='file'] {
+input[type='file'],
+select {
   background: #111;
   color: #f2f2f2;
   border: 1px solid #3f3f3f;
@@ -86,15 +88,88 @@ button:disabled {
   display: grid;
   place-items: center;
   text-align: center;
+  margin-bottom: 1rem;
 }
 
 .word-display {
   font-size: clamp(2rem, 7vw, 5rem);
   font-weight: 700;
   min-height: 1.2em;
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  width: min(580px, 100%);
+}
+
+.rsvp-word {
+  line-height: 1.05;
+}
+
+.anchor-letter {
+  color: #ff4a4a;
+}
+
+.rsvp-line {
+  width: 100%;
+  height: 3px;
+  background: #5b5b5b;
+  border-radius: 2px;
+}
+
+.rsvp-line-top {
+  margin-bottom: 0.5rem;
+}
+
+.rsvp-line-bottom {
+  margin-top: 0.5rem;
 }
 
 .progress {
   color: #a0a0a0;
   margin-bottom: 0;
+}
+
+.chapter-panel {
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.chapter-panel h2 {
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+}
+
+.chapter-hint {
+  margin-top: 0;
+  color: #a0a0a0;
+}
+
+.chapter-text {
+  max-height: 300px;
+  overflow: auto;
+  line-height: 1.8;
+  background: #111;
+  border: 1px solid #303030;
+  border-radius: 8px;
+  padding: 0.8rem;
+}
+
+.preview-word {
+  background: transparent;
+  border: none;
+  color: #d9d9d9;
+  padding: 0;
+  margin: 0 0.08rem;
+  border-radius: 0;
+}
+
+.preview-word:hover {
+  color: #8ea3ff;
+  text-decoration: underline;
+}
+
+.preview-word.selected-word {
+  color: #ff6a6a;
+  text-decoration: underline;
 }
