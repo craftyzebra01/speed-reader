@@ -34,7 +34,30 @@ Run the container:
 docker run --rm -p 8080:8080 rsvp-speed-reader
 ```
 
+Or use the included sample Compose file:
+
+```bash
+cp docker-compose.sample.yml docker-compose.yml
+docker compose up --build
+```
+
 Open `http://localhost:8080` in your browser.
+
+### Pull and run from Docker Hub
+
+After your GitHub Actions publish job has pushed the image, pull it with:
+
+```bash
+docker pull <dockerhub-username>/rsvp-speed-reader:latest
+```
+
+Run the pulled image:
+
+```bash
+docker run --rm -p 8080:8080 <dockerhub-username>/rsvp-speed-reader:latest
+```
+
+If you want a specific immutable version, replace `latest` with the commit SHA tag shown in the workflow output.
 
 ## Auto-publish to Docker Hub on push to `main`
 
