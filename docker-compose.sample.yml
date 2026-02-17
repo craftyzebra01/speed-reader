@@ -1,0 +1,10 @@
+services:
+  speed-reader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rsvp-speed-reader:local
+    container_name: rsvp-speed-reader
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
