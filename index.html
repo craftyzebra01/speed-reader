@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RSVP Speed Reader</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <h1>RSVP Speed Reader</h1>
+      <p class="subtitle">Upload an EPUB and read one word at a time.</p>
+
+      <section class="controls">
+        <label class="file-input">
+          <span>EPUB file</span>
+          <input id="epubFile" type="file" accept=".epub,application/epub+zip" />
+        </label>
+
+        <label>
+          Start from word #
+          <input id="startWord" type="number" min="1" value="1" />
+        </label>
+
+        <label>
+          Words per minute
+          <input id="wpm" type="number" min="50" max="1500" value="300" />
+        </label>
+
+        <div class="button-row">
+          <button id="loadBtn" type="button">Load EPUB</button>
+          <button id="startBtn" type="button" disabled>Start</button>
+          <button id="pauseBtn" type="button" disabled>Pause</button>
+          <button id="resetBtn" type="button" disabled>Reset</button>
+        </div>
+      </section>
+
+      <section class="reader">
+        <div id="wordDisplay" class="word-display">Upload an EPUB to begin</div>
+        <p id="progress" class="progress">No book loaded</p>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
